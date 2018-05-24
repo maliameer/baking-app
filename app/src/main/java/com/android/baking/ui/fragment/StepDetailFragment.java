@@ -173,13 +173,24 @@ public class StepDetailFragment extends Fragment implements View.OnClickListener
 
     public void initializePlayer(Uri uri) {
 
+        MediaSource mediaSource = buildMediaSource(uri);
         if (player == null) {
 
             player = ExoPlayerFactory.newSimpleInstance(new DefaultRenderersFactory(getActivity()),
                                                         new DefaultTrackSelector(), new DefaultLoadControl());
             playerView.setPlayer(player);
+            player.prepare(mediaSource, false, true);
+
+        } else if (player.getPlaybackParameters() == null) {
+
+            player.prepare(mediaSource, true, false);
             player.setPlayWhenReady(true);
-            player.prepare(buildMediaSource(uri), false, true);
+
+        } else if (player.getPlaybackParameters()!= null){
+
+            player.prepare(mediaSource, false, true);
+            player.setPlayWhenReady(true);
+            player.getPlaybackState();
 
         }
 
@@ -232,24 +243,48 @@ public class StepDetailFragment extends Fragment implements View.OnClickListener
         this.listener = fragmentListener;
     }
 
+    private void startPlayer(){
+        player.setPlayWhenReady(true);
+        player.getPlaybackState();
+    }
+
+    private void pausePlayer(){
+        player.setPlayWhenReady(false);
+        player.getPlaybackState();
+    }
+
     @Override
     public void onClick(View view) {
 
         int id = view.getId();
         if (id == R.id.back_button) {
 
-            if(currentIndex == 0)
+            if(currentIndex == 0) {
                 return;
-            currentIndex--;
-            show();
+            } else {
+
+                currentIndex--;
+                show();
+                if (player != null) {
+                    pausePlayer();
+                    show();
+                }
+
+            }
 
         } else if (id == R.id.next_button) {
 
-            if(currentIndex == (steps.size()-1)) {
+            if(currentIndex == (steps.size() - 1)) {
                 return;
             } else {
+
                 currentIndex++;
                 show();
+                if (player != null) {
+                    pausePlayer();
+                    show();
+                }
+
             }
 
         }
@@ -291,8 +326,15 @@ public class StepDetailFragment extends Fragment implements View.OnClickListener
     public void onResume() {
 
         super.onResume();
-        if (player != null) {
-            player.setPlayWhenReady(playWhenReady);
+        if (playerView != null) {
+
+            if (player != null) {
+                player.seekTo(currentPosition);
+                player.setPlayWhenReady(true);
+            } else {
+                startPlayer();
+            }
+
         }
 
     }
@@ -335,22 +377,33 @@ public class StepDetailFragment extends Fragment implements View.OnClickListener
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
+
         outState.putInt("index",currentIndex);
-        outState.putParcelableArrayList("steps",steps);
-        outState.putBoolean("tablet",tablet);
-        outState.putLong("player", player.getCurrentPosition());
+        outState.putParcelableArrayList("steps", steps);
+        outState.putBoolean("tablet", tablet);
+
+        if (player != null) {
+            outState.putLong("playback_position", player.getCurrentPosition());
+            outState.putBoolean("playPause", player.getPlayWhenReady());
+        }
         super.onSaveInstanceState(outState);
 
     }
 
     private void onRestoreInstanceState(Bundle savedState){
 
-        if(savedState!=null){
-            savedState.getInt("index",currentIndex);
-            savedState.putParcelableArrayList("steps",steps);
-            savedState.getBoolean("tablet",tablet);
-            long position = savedState.getLong("player");
-            player.seekTo(position);
+        if(savedState != null) {
+
+            steps = savedState.getParcelableArrayList("steps");
+
+            currentIndex = savedState.getInt("index", currentIndex);
+            tablet = savedState.getBoolean("tablet", tablet);
+
+            if (player != null) {
+                player.seekTo(savedState.getLong("playback_position"));
+                player.setPlayWhenReady(savedState.getBoolean("playPause"));
+            }
+
         }
 
     }

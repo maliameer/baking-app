@@ -62,6 +62,8 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.RecyclerHo
 
             }
 
+        } else {
+            recyclerHolder.recipeImage.setImageResource(R.drawable.recipe_step_placeholder);
         }
 
     }
